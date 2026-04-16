@@ -33,6 +33,7 @@ interface ClosedLostDeal {
   arr: number;
   date: string;
   reason: string;
+  countries?: string[];
 }
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -84,14 +85,14 @@ const INITIAL_COUNTRIES: Country[] = [
 ];
 
 const CLOSED_LOST: ClosedLostDeal[] = [
-  { company:"Airwallex",           arr:100000, date:"Feb 2026", reason:"Chose Fonoa; e-invoicing 'checked every single box'" },
-  { company:"Rhapsody",            arr:140000, date:"",         reason:"" },
-  { company:"Witbe",               arr:45000,  date:"Apr 2026", reason:"Couldn't guarantee France e-invoicing by Sept 2026" },
-  { company:"SirionLabs",          arr:31988,  date:"Feb 2025", reason:"Wanted e-invoicing as hard requirement" },
-  { company:"Tive Inc.",           arr:30000,  date:"Dec 2025", reason:"E-invoicing among missing features" },
-  { company:"Plusgrade",           arr:10000,  date:"Jan 2026", reason:"E-invoicing primary requirement; will re-engage" },
-  { company:"Datasnipper",         arr:20000,  date:"",         reason:"" },
-  { company:"Automation Anywhere", arr:0,      date:"Feb 2024", reason:"Needs e-invoicing in 4 countries before US" },
+  { company:"Airwallex",           arr:100000, date:"Feb 2026", reason:"Chose Fonoa; e-invoicing 'checked every single box'", countries:[] },
+  { company:"Rhapsody",            arr:140000, date:"",         reason:"",                                                    countries:["Denmark","France","United Kingdom"] },
+  { company:"Witbe",               arr:45000,  date:"Apr 2026", reason:"Couldn't guarantee France e-invoicing by Sept 2026",  countries:["France"] },
+  { company:"SirionLabs",          arr:31988,  date:"Feb 2025", reason:"Wanted e-invoicing as hard requirement",              countries:[] },
+  { company:"Tive Inc.",           arr:30000,  date:"Dec 2025", reason:"E-invoicing among missing features",                  countries:[] },
+  { company:"Plusgrade",           arr:10000,  date:"Jan 2026", reason:"E-invoicing primary requirement; will re-engage",     countries:[] },
+  { company:"Datasnipper",         arr:20000,  date:"",         reason:"Surfaced by Dhiv, Feb 2026",                          countries:["Belgium","France","Saudi Arabia","Luxembourg"] },
+  { company:"Automation Anywhere", arr:0,      date:"Feb 2024", reason:"Needs e-invoicing in 4 countries before US",          countries:[] },
 ];
 
 const VIDA_MILESTONES = [
@@ -409,8 +410,9 @@ export function Roadmap() {
     { company:"Rhapsody",    arr:0,      countryCode:"FR" },
     { company:"Rhapsody",    arr:0,      countryCode:"GB" },
   ]);
-  const [showModal, setShowModal] = useState(false);
-  const [showCL,    setShowCL]    = useState(false);
+  const [showModal,    setShowModal]    = useState(false);
+  const [showCL,       setShowCL]       = useState(false);
+  const [showPipeline, setShowPipeline] = useState(false);
 
   const countries = useMemo<ComputedCountry[]>(()=>rawCountries.map(c=>{
     const cDeals      = deals.filter(d=>d.countryCode===c.code);
@@ -447,7 +449,7 @@ export function Roadmap() {
           {[
             { label:"P7 — Act now",        val:p7.length?p7.map(c=>c.name).join(", "):"None", sub:"Live non-res mandate + non-local sellers",  accent:"#ef4444" },
             { label:"P6 — High urgency",   val:p6.length?p6.map(c=>c.name).join(", "):"None", sub:"Live non-res mandate + pipeline",           accent:"#f97316" },
-            { label:"Pipeline ARR at risk",val:fmtArr(pipelineArr),   sub:`${Object.keys(companyMaxArr).length} active deal${Object.keys(companyMaxArr).length!==1?"s":""}`, accent:"#3b82f6" },
+            { label:"Pipeline ARR at risk",val:fmtArr(pipelineArr),   sub:"Click to expand",                                                   accent:"#3b82f6", onClick:()=>setShowPipeline(v=>!v) },
             { label:"Closed-lost to gap",  val:fmtArr(closedLostArr), sub:"Click to expand",                                                   accent:"#dc2626", onClick:()=>setShowCL(v=>!v) },
           ].map(s=>(
             <div key={s.label} onClick={s.onClick} style={{ background:"#1e293b", borderRadius:8, padding:"10px 14px", minWidth:190, cursor:s.onClick?"pointer":"default", border:"1px solid #334155" }}>
@@ -471,7 +473,14 @@ export function Roadmap() {
               <div key={i} style={{ background:"#fff", border:"1px solid #fecaca", borderRadius:8, padding:"8px 12px", minWidth:200, maxWidth:240 }}>
                 <div style={{ fontWeight:700, fontSize:13 }}>{d.company}</div>
                 <div style={{ fontSize:13, color:"#dc2626", fontWeight:700 }}>{fmtArr(d.arr)}</div>
-                {d.reason && <div style={{ fontSize:11, color:"#64748b", marginTop:3 }}>{d.reason}</div>}
+                {d.countries && d.countries.length > 0 && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:5 }}>
+                    {d.countries.map(c=>(
+                      <span key={c} style={{ fontSize:10, padding:"1px 6px", borderRadius:10, background:"#fee2e2", color:"#b91c1c", fontWeight:600 }}>{c}</span>
+                    ))}
+                  </div>
+                )}
+                {d.reason && <div style={{ fontSize:11, color:"#64748b", marginTop:4 }}>{d.reason}</div>}
                 {d.date   && <div style={{ fontSize:10, color:"#9ca3af", marginTop:2 }}>{d.date}</div>}
               </div>
             ))}
@@ -479,24 +488,37 @@ export function Roadmap() {
         </div>
       )}
 
-      {/* Pipeline strip */}
-      {deals.length>0 && (
-        <div style={{ background:"#eff6ff", borderBottom:"1px solid #bfdbfe", padding:"8px 28px", display:"flex", alignItems:"center", flexWrap:"wrap", gap:6 }}>
-          <span style={{ fontSize:12, fontWeight:700, color:"#1d4ed8", marginRight:4 }}>Pipeline:</span>
-          {Object.values(deals.reduce<Record<string,{company:string;arr:number;countryCodes:string[]}>>((acc,d)=>{
-            if (!acc[d.company]) acc[d.company] = { company:d.company, arr:0, countryCodes:[] };
-            acc[d.company].arr = Math.max(acc[d.company].arr, d.arr||0);
-            acc[d.company].countryCodes.push(d.countryCode);
-            return acc;
-          },{})).map(g=>{
-            const names = g.countryCodes.map(code=>countries.find(c=>c.code===code)?.name||code);
-            return (
-              <span key={g.company} style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#dbeafe", borderRadius:12, padding:"3px 10px", fontSize:12, color:"#1d4ed8" }}>
-                <strong>{g.company}</strong> · {names.join(", ")}{g.arr>0?` · ${fmtArr(g.arr)}`:""}
-                <span onClick={()=>setDeals(prev=>prev.filter(d=>d.company!==g.company))} style={{ cursor:"pointer", marginLeft:2, opacity:0.5, fontWeight:700 }}>×</span>
-              </span>
-            );
-          })}
+      {/* Pipeline panel */}
+      {showPipeline && (
+        <div style={{ background:"#eff6ff", borderBottom:"1px solid #bfdbfe", padding:"12px 28px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <span style={{ fontWeight:700, color:"#1d4ed8", fontSize:13 }}>Active Pipeline — E-Invoicing Requirement ({fmtArr(pipelineArr)} total)</span>
+            <button onClick={()=>setShowPipeline(false)} style={{ background:"none", border:"none", cursor:"pointer", color:"#1d4ed8", fontSize:20, lineHeight:1 }}>×</button>
+          </div>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {Object.values(deals.reduce<Record<string,{company:string;arr:number;countryCodes:string[]}>>((acc,d)=>{
+              if (!acc[d.company]) acc[d.company] = { company:d.company, arr:0, countryCodes:[] };
+              acc[d.company].arr = Math.max(acc[d.company].arr, d.arr||0);
+              acc[d.company].countryCodes.push(d.countryCode);
+              return acc;
+            },{})).map(g=>{
+              const names = g.countryCodes.map(code=>countries.find(c=>c.code===code)?.name||code);
+              return (
+                <div key={g.company} style={{ background:"#fff", border:"1px solid #bfdbfe", borderRadius:8, padding:"8px 12px", minWidth:200, maxWidth:240 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                    <span style={{ fontWeight:700, fontSize:13 }}>{g.company}</span>
+                    <span onClick={()=>setDeals(prev=>prev.filter(d=>d.company!==g.company))} style={{ cursor:"pointer", color:"#94a3b8", fontWeight:700, fontSize:16, lineHeight:1, marginLeft:6 }}>×</span>
+                  </div>
+                  {g.arr>0 && <div style={{ fontSize:13, color:"#1d4ed8", fontWeight:700 }}>{fmtArr(g.arr)}</div>}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:5 }}>
+                    {names.map(n=>(
+                      <span key={n} style={{ fontSize:10, padding:"1px 6px", borderRadius:10, background:"#dbeafe", color:"#1d4ed8", fontWeight:600 }}>{n}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
