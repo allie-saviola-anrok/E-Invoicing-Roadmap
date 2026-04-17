@@ -14,6 +14,7 @@ interface Country {
   localSellers: number;
   nonLocalSellers: number;
   pipeline: number;
+  customerRequests?: string[];
 }
 
 interface Deal {
@@ -51,12 +52,12 @@ const INITIAL_COUNTRIES: Country[] = [
   { code:"ID", name:"Indonesia",     liveDate:"2016",                                scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0 },
   { code:"IT", name:"Italy",         liveDate:"Jan 2019",                            scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
   { code:"IN", name:"India",         liveDate:"2020",                                scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:29, pipeline:0 },
-  { code:"AL", name:"Albania",       liveDate:"2021",                                scope:"B2B + B2G",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1 },
+  { code:"AL", name:"Albania",       liveDate:"2021",                                scope:"B2B + B2G",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, customerRequests:["Notion","Anthropic"] },
   { code:"SA", name:"Saudi Arabia",  liveDate:"2021",                                scope:"B2B+B2G+B2C",  nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0 },
   { code:"AU", name:"Australia",     liveDate:"2022",                                scope:"B2G only",     nonRes:"No",      res:"Yes",      localSellers:1,  nonLocalSellers:47, pipeline:0 },
   { code:"VN", name:"Vietnam",       liveDate:"2022",                                scope:"B2B+B2G+B2C",  nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0 },
   { code:"TW", name:"Taiwan",        liveDate:"Jan 2020 (non-res); 2021 (locals)",   scope:"B2B + B2C",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:3,  pipeline:0 },
-  { code:"RS", name:"Serbia",        liveDate:"Jan 2023",                            scope:"B2B + B2G",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1 },
+  { code:"RS", name:"Serbia",        liveDate:"Jan 2023",                            scope:"B2B + B2G",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, customerRequests:["Anthropic"] },
   { code:"RO", name:"Romania",       liveDate:"Jan 2024",                            scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
   { code:"IL", name:"Israel",        liveDate:"May 2024",                            scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:1,  nonLocalSellers:0,  pipeline:0 },
   { code:"DE", name:"Germany",       liveDate:"Jan 2025 (receive); 2027–28 (send)",  scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:2,  nonLocalSellers:0,  pipeline:0 },
@@ -283,7 +284,9 @@ function PhaseBoard({ countries }: { countries: ComputedCountry[] }) {
                 <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:6, fontSize:11, color:"#475569" }}>
                   {c.localSellers    > 0 && <span>🏠 {c.localSellers} local</span>}
                   {c.nonLocalSellers > 0 && <span>🌐 {c.nonLocalSellers} non-local</span>}
-                  {c.pipeline        > 0 && <span>📋 {c.pipeline} pipeline</span>}
+                  {c.customerRequests && c.customerRequests.length > 0
+                    ? <span title="Existing customer requests">🏢 {c.customerRequests.join(", ")}</span>
+                    : c.pipeline > 0 && <span>📋 {c.pipeline} pipeline</span>}
                 </div>
                 {c.deals?.length>0 && (
                   <div style={{ marginTop:6 }}>
