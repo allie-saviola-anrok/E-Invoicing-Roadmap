@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -479,13 +479,25 @@ export function Roadmap() {
   const [showModal,    setShowModal]    = useState(false);
   const [showCL,       setShowCL]       = useState(false);
   const [showPipeline, setShowPipeline] = useState(false);
+  const [sellerCounts, setSellerCounts] = useState<{ local: Record<string,number>; nonLocal: Record<string,number> } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/sellers")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && !data.error) setSellerCounts(data); })
+      .catch(() => {}); // silently fall back to hardcoded values on failure
+  }, []);
 
   const countries = useMemo<ComputedCountry[]>(()=>rawCountries.map(c=>{
     const cDeals      = deals.filter(d=>d.countryCode===c.code);
     const pipelineARR = cDeals.reduce((sum,d)=>sum+(d.arr||0), 0);
-    const merged      = { ...c, pipeline:c.pipeline+cDeals.length, pipelineARR, deals:cDeals };
+    // Merge live Omni counts if available, otherwise fall back to hardcoded values
+    const liveCode    = c.code.replace(/_.*/, ""); // handle SE_VIDA → SE
+    const localSellers    = sellerCounts ? (sellerCounts.local[liveCode]    ?? 0) : c.localSellers;
+    const nonLocalSellers = sellerCounts ? (sellerCounts.nonLocal[liveCode] ?? 0) : c.nonLocalSellers;
+    const merged      = { ...c, localSellers, nonLocalSellers, pipeline:c.pipeline+cDeals.length, pipelineARR, deals:cDeals };
     return { ...merged, priority:calcPriority(merged) };
-  }), [rawCountries, deals]);
+  }), [rawCountries, deals, sellerCounts]);
 
   function updateField(code: string, field: string, val: number) {
     setRaw(prev=>prev.map(c=>c.code===code?{...c,[field]:val}:c));
@@ -511,6 +523,9 @@ export function Roadmap() {
             <h1 style={{ margin:0, fontSize:22, fontWeight:700, letterSpacing:"-0.4px" }}>Anrok E-Invoicing Mandate Roadmap</h1>
             <p style={{ margin:"4px 0 0", fontSize:13, color:"#94a3b8" }}>
               {countries.length} countries · click seller &amp; pipeline counts to edit · priority scores update live
+              {sellerCounts
+                ? <span style={{ marginLeft:8, color:"#4ade80", fontSize:11, fontWeight:600 }}>● seller counts live from Omni</span>
+                : <span style={{ marginLeft:8, color:"#64748b", fontSize:11 }}>● seller counts static (Omni unavailable)</span>}
             </p>
           </div>
           <button onClick={()=>setShowModal(true)} style={{ ...btnP, padding:"9px 18px" }}>+ Add Pipeline Deal</button>
