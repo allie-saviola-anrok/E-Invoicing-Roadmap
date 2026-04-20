@@ -15,6 +15,8 @@ interface Country {
   nonLocalSellers: number;
   pipeline: number;
   customerRequests?: string[];
+  eezi: boolean;
+  invopop: boolean;
 }
 
 interface Deal {
@@ -47,42 +49,54 @@ interface ClosedLostDeal {
 // nonRes="No", so those sellers are not in scope for e-invoicing → 0).
 
 const INITIAL_COUNTRIES: Country[] = [
-  { code:"KR", name:"South Korea",   liveDate:"2011",                                scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:21, pipeline:0 },
-  { code:"TR", name:"Turkey",        liveDate:"2012",                                scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:6,  pipeline:0 },
-  { code:"ID", name:"Indonesia",     liveDate:"2016",                                scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0 },
-  { code:"IT", name:"Italy",         liveDate:"Jan 2019",                            scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"IN", name:"India",         liveDate:"2020",                                scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:29, pipeline:0 },
-  { code:"AL", name:"Albania",       liveDate:"2021",                                scope:"B2B + B2G",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, customerRequests:["Notion","Anthropic"] },
-  { code:"SA", name:"Saudi Arabia",  liveDate:"2021",                                scope:"B2B+B2G+B2C",  nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0 },
-  { code:"AU", name:"Australia",     liveDate:"2022",                                scope:"B2G only",     nonRes:"No",      res:"Yes",      localSellers:1,  nonLocalSellers:47, pipeline:0 },
-  { code:"VN", name:"Vietnam",       liveDate:"2022",                                scope:"B2B+B2G+B2C",  nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0 },
-  { code:"TW", name:"Taiwan",        liveDate:"Jan 2020 (non-res); 2021 (locals)",   scope:"B2B + B2C",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:3,  pipeline:0 },
-  { code:"RS", name:"Serbia",        liveDate:"Jan 2023",                            scope:"B2B + B2G",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, customerRequests:["Anthropic"] },
-  { code:"RO", name:"Romania",       liveDate:"Jan 2024",                            scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"IL", name:"Israel",        liveDate:"May 2024",                            scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:1,  nonLocalSellers:0,  pipeline:0 },
-  { code:"DE", name:"Germany",       liveDate:"Jan 2025 (receive); 2027–28 (send)",  scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:2,  nonLocalSellers:0,  pipeline:0 },
-  { code:"MY", name:"Malaysia",      liveDate:"Jul 2025 (phased)",                   scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:5,  pipeline:0 },
-  { code:"BE", name:"Belgium",       liveDate:"Jan 2026",                            scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"PT", name:"Portugal",      liveDate:"Jan 2026 (B2G); Jan 2027 (B2B)",      scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"HR", name:"Croatia",       liveDate:"Jan 2026",                            scope:"B2B",          nonRes:"TBD",     res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"PL", name:"Poland",        liveDate:"Feb–Apr 2026 (phased)",               scope:"B2B + B2G",    nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"GR", name:"Greece",        liveDate:"Feb 2026 (large); Oct 2026 (all)",    scope:"B2B + B2G",    nonRes:"TBD",     res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"MX", name:"Mexico",        liveDate:"2014 (res); Apr 2026 (non-res)",       scope:"B2B + B2C",    nonRes:"Yes",     res:"Yes",      localSellers:0,  nonLocalSellers:2,  pipeline:0 },
-  { code:"SG", name:"Singapore",     liveDate:"Nov 2025 (new vol); 2028–31 (exist)", scope:"B2B",          nonRes:"No",      res:"Yes",      localSellers:0,  nonLocalSellers:10, pipeline:0 },
-  { code:"FR", name:"France",        liveDate:"Sep 2026 (large/mid); Sep 2027 (SME)",scope:"B2B",          nonRes:"No",      res:"Upcoming", localSellers:1,  nonLocalSellers:0,  pipeline:0 },
-  { code:"NZ", name:"New Zealand",   liveDate:"2026–2027",                           scope:"B2G only",     nonRes:"No",      res:"Upcoming", localSellers:0,  nonLocalSellers:15, pipeline:0 },
-  { code:"AE", name:"UAE",           liveDate:"Jan 2027 (large); Jul 2026 pilot",    scope:"B2B + B2G",    nonRes:"No",      res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"ZA", name:"South Africa",  liveDate:"~2028",                               scope:"B2B + B2G",    nonRes:"No",      res:"Upcoming", localSellers:0,  nonLocalSellers:11, pipeline:0 },
-  { code:"ES", name:"Spain",         liveDate:"2027–2028",                           scope:"B2B",          nonRes:"No",      res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"IE", name:"Ireland",       liveDate:"2028–2030 (ViDA)",                    scope:"B2B",          nonRes:"No",      res:"No",       localSellers:4,  nonLocalSellers:0,  pipeline:0 },
-  { code:"NO", name:"Norway",        liveDate:"2028–2030",                           scope:"B2B + B2G",    nonRes:"No",      res:"No",       localSellers:0,  nonLocalSellers:22, pipeline:0 },
-  { code:"DK", name:"Denmark",       liveDate:"~2030",                               scope:"B2B + B2G",    nonRes:"No",      res:"No",       localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"LU", name:"Luxembourg",    liveDate:"~2030 (ViDA)",                        scope:"B2B",          nonRes:"No",      res:"No",       localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"AT", name:"Austria",       liveDate:"~2030",                               scope:"B2B + B2G",    nonRes:"No",      res:"No",       localSellers:0,  nonLocalSellers:0,  pipeline:0 },
-  { code:"NL", name:"Netherlands",   liveDate:"~2030 (ViDA)",                        scope:"B2B",          nonRes:"No",      res:"No",       localSellers:2,  nonLocalSellers:0,  pipeline:0 },
-  { code:"SE", name:"Sweden",        liveDate:"~2030 (ViDA)",                        scope:"B2B",          nonRes:"No",      res:"No",       localSellers:1,  nonLocalSellers:0,  pipeline:0 },
-  { code:"FI", name:"Finland",       liveDate:"~2030 (ViDA)",                        scope:"B2B",          nonRes:"No",      res:"No",       localSellers:1,  nonLocalSellers:0,  pipeline:0 },
-  { code:"GB", name:"United Kingdom",liveDate:"~2029",                               scope:"B2B",          nonRes:"TBD",     res:"No",       localSellers:13, nonLocalSellers:96, pipeline:0 },
+  // ── Live mandates ────────────────────────────────────────────────────────────
+  { code:"KR",     name:"South Korea",      liveDate:"2011",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:21, pipeline:0, eezi:true,  invopop:false },
+  { code:"TR",     name:"Turkey",           liveDate:"2012",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:6,  pipeline:0, eezi:false, invopop:false },
+  { code:"ID",     name:"Indonesia",        liveDate:"2016",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0, eezi:false, invopop:false },
+  { code:"CH",     name:"Switzerland",      liveDate:"2016",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:31, pipeline:0, eezi:true,  invopop:false },
+  { code:"IT",     name:"Italy",            liveDate:"Jan 2019",                                 scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"EE",     name:"Estonia",          liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"LU",     name:"Luxembourg",       liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"SE",     name:"Sweden",           liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"LT",     name:"Lithuania",        liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"IN",     name:"India",            liveDate:"2020",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:29, pipeline:0, eezi:true,  invopop:false },
+  { code:"IS",     name:"Iceland",          liveDate:"2020",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0, eezi:true,  invopop:false },
+  { code:"AL",     name:"Albania",          liveDate:"2021",                                     scope:"B2B + B2G",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, eezi:false, invopop:false, customerRequests:["Notion","Anthropic"] },
+  { code:"SA",     name:"Saudi Arabia",     liveDate:"2021",                                     scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"AU",     name:"Australia",        liveDate:"2022",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:1,  nonLocalSellers:47, pipeline:0, eezi:false, invopop:true  },
+  { code:"VN",     name:"Vietnam",          liveDate:"2022",                                     scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0, eezi:false, invopop:false },
+  { code:"TW",     name:"Taiwan",           liveDate:"Jan 2020 (non-res); Jan 2021 (locals)",    scope:"B2B + B2C",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:3,  pipeline:0, eezi:true,  invopop:false },
+  { code:"RS",     name:"Serbia",           liveDate:"Jan 2023",                                 scope:"B2B + B2G",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, eezi:false, invopop:false, customerRequests:["Anthropic"] },
+  { code:"RO",     name:"Romania",          liveDate:"Jan 2024",                                 scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"IL",     name:"Israel",           liveDate:"May 2024",                                 scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"DE",     name:"Germany",          liveDate:"Jan 2025 (receive); Jan 2027–2028 (send)", scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:2,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"MY",     name:"Malaysia",         liveDate:"Jul 2025 (phased by revenue)",             scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:5,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"JO",     name:"Jordan",           liveDate:"2025",                                     scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"NG",     name:"Nigeria",          liveDate:"2025",                                     scope:"TBD",             nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0, eezi:true,  invopop:false },
+  { code:"BE",     name:"Belgium",          liveDate:"Jan 2026",                                 scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"PT",     name:"Portugal",         liveDate:"Jan 2026",                                 scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"HR",     name:"Croatia",          liveDate:"Jan 2026",                                 scope:"B2B",             nonRes:"TBD", res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"CM",     name:"Cameroon",         liveDate:"2026",                                     scope:"—",               nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:false },
+  { code:"MK",     name:"North Macedonia",  liveDate:"2026",                                     scope:"—",               nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:false },
+  { code:"PL",     name:"Poland",           liveDate:"Feb–Apr 2026 (phased)",                    scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"GR",     name:"Greece",           liveDate:"Feb 2026 (large); Oct 2026 (all)",         scope:"B2B + B2G",       nonRes:"TBD", res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"MX",     name:"Mexico",           liveDate:"2014 (res); Apr 2026 (non-res)",            scope:"B2B + B2C",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:2,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"SG",     name:"Singapore",        liveDate:"Nov 2025 (new vol); 2028–31 (exist)",      scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:10, pipeline:0, eezi:false, invopop:true  },
+  // ── Upcoming mandates ────────────────────────────────────────────────────────
+  { code:"FR",     name:"France",           liveDate:"Sep 2026 (large/mid); Sep 2027 (SME)",     scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"NZ",     name:"New Zealand",      liveDate:"2026–2027",                                scope:"B2G only",        nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:15, pipeline:0, eezi:false, invopop:true  },
+  { code:"KH",     name:"Cambodia",         liveDate:"2027",                                     scope:"—",               nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:false },
+  { code:"AE",     name:"UAE",              liveDate:"Jan 2027 (large); Jul 2026 pilot",         scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:true  },
+  { code:"ES",     name:"Spain",            liveDate:"2027–2028",                                scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"ZA",     name:"South Africa",     liveDate:"~2028",                                    scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:11, pipeline:0, eezi:false, invopop:false },
+  { code:"GB",     name:"United Kingdom",   liveDate:"~2029",                                    scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:13, nonLocalSellers:96, pipeline:0, eezi:true,  invopop:false },
+  { code:"IE",     name:"Ireland",          liveDate:"2028–2030 (ViDA)",                         scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:4,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:false },
+  { code:"NO",     name:"Norway",           liveDate:"2028–2030",                                scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:22, pipeline:0, eezi:true,  invopop:true  },
+  { code:"DK",     name:"Denmark",          liveDate:"~2030",                                    scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
+  { code:"AT",     name:"Austria",          liveDate:"~2030",                                    scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"NL",     name:"Netherlands",      liveDate:"~2030 (ViDA)",                             scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:2,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"SE_VIDA",name:"Sweden (ViDA B2B)",liveDate:"~2030 (ViDA)",                             scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"FI",     name:"Finland",          liveDate:"~2030 (ViDA)",                             scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
 ];
 
 const CLOSED_LOST: ClosedLostDeal[] = [
@@ -372,7 +386,7 @@ function Table({ countries, onUpdate }: { countries: ComputedCountry[]; onUpdate
       <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
         <thead>
           <tr style={{ background:"#f8fafc", borderBottom:"2px solid #e2e8f0" }}>
-            {["P","Country","Mandate Date","Scope","Non-Res","Resident","Local","Non-Local","Pipeline","Deals"].map(h=>(
+            {["P","Country","Mandate Date","Scope","Non-Res","Resident","Local","Non-Local","Pipeline","Deals","Eezi","Invopop"].map(h=>(
               <th key={h} style={{ padding:"8px 10px", textAlign:"left", fontSize:11, fontWeight:700, color:"#64748b", whiteSpace:"nowrap" }}>{h}</th>
             ))}
           </tr>
@@ -393,6 +407,12 @@ function Table({ countries, onUpdate }: { countries: ComputedCountry[]; onUpdate
                 {c.deals?.length
                   ? c.deals.map((d,di)=><div key={di} style={{ fontSize:11, color:"#1d4ed8" }}>{d.company}{d.arr?` · ${fmtArr(d.arr)}`:""}</div>)
                   : <span style={{ color:"#d1d5db" }}>—</span>}
+              </td>
+              <td style={{ padding:"8px 10px", textAlign:"center" }}>
+                <span style={{ fontSize:11, padding:"2px 8px", borderRadius:10, fontWeight:600, background:c.eezi?"#dcfce7":"#f1f5f9", color:c.eezi?"#15803d":"#94a3b8" }}>{c.eezi?"Yes":"No"}</span>
+              </td>
+              <td style={{ padding:"8px 10px", textAlign:"center" }}>
+                <span style={{ fontSize:11, padding:"2px 8px", borderRadius:10, fontWeight:600, background:c.invopop?"#dbeafe":"#f1f5f9", color:c.invopop?"#1d4ed8":"#94a3b8" }}>{c.invopop?"Yes":"No"}</span>
               </td>
             </tr>
           ))}
