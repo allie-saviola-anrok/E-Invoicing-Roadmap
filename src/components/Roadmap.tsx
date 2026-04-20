@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type EffortTier = "TBD" | "S" | "M" | "L" | "XL";
+
 interface Country {
   code: string;
   name: string;
@@ -17,6 +19,7 @@ interface Country {
   customerRequests?: string[];
   eezi: boolean;
   invopop: boolean;
+  effort?: EffortTier;
 }
 
 interface Deal {
@@ -122,9 +125,13 @@ const VIDA_MILESTONES = [
 
 const ARR_ELEVATION_THRESHOLD = 100_000;
 
+// Effort depresses the demand-based score. Never elevates — demand drives priority,
+// effort moderates it. Floor is P1.
+const EFFORT_ADJ: Record<EffortTier, number> = { TBD: 0, S: 0, M: 0, L: -1, XL: -2 };
+
 type CalcInput = Omit<ComputedCountry, "priority">;
 
-function calcPriority({ nonRes, res, localSellers: H, nonLocalSellers: I, pipeline: J, pipelineARR: ARR = 0 }: CalcInput): number {
+function calcPriority({ nonRes, res, localSellers: H, nonLocalSellers: I, pipeline: J, pipelineARR: ARR = 0, effort = "TBD" }: CalcInput): number {
   let score: number;
   if      (nonRes === "Yes" && I > 0)                                                           score = 7;
   else if (nonRes === "Yes" && J > 0)                                                           score = 6;
@@ -135,6 +142,7 @@ function calcPriority({ nonRes, res, localSellers: H, nonLocalSellers: I, pipeli
   else                                                                                           score = 1;
 
   if (ARR >= ARR_ELEVATION_THRESHOLD && score < 5) score = Math.min(5, score + 1);
+  score = Math.max(1, score + EFFORT_ADJ[effort]);
   return score;
 }
 
@@ -216,6 +224,31 @@ function InlineEdit({ value, onChange }: { value: number; onChange: (v: number) 
   );
 }
 
+// ── Effort Edit ───────────────────────────────────────────────────────────────
+
+const EFFORT_CYCLE: EffortTier[] = ["TBD", "S", "M", "L", "XL"];
+const EFFORT_STYLE: Record<EffortTier, { bg: string; text: string; label: string }> = {
+  TBD: { bg:"#f1f5f9", text:"#94a3b8", label:"Not yet scoped" },
+  S:   { bg:"#dcfce7", text:"#15803d", label:"Small — days to weeks" },
+  M:   { bg:"#fef9c3", text:"#854d0e", label:"Medium — 1–2 months" },
+  L:   { bg:"#fed7aa", text:"#c2410c", label:"Large — quarter-scale · −1 tier" },
+  XL:  { bg:"#fee2e2", text:"#b91c1c", label:"Extra large — multi-quarter · −2 tiers" },
+};
+
+function EffortEdit({ value = "TBD", onChange }: { value?: EffortTier; onChange: (v: EffortTier) => void }) {
+  function cycle() {
+    const i = EFFORT_CYCLE.indexOf(value);
+    onChange(EFFORT_CYCLE[(i + 1) % EFFORT_CYCLE.length]);
+  }
+  const s = EFFORT_STYLE[value];
+  return (
+    <span onClick={cycle} title={`${s.label} — click to change`}
+      style={{ cursor:"pointer", fontSize:11, padding:"2px 8px", borderRadius:10, fontWeight:600, background:s.bg, color:s.text, userSelect:"none", whiteSpace:"nowrap" }}>
+      {value}
+    </span>
+  );
+}
+
 // ── Add Deal Modal ────────────────────────────────────────────────────────────
 
 const lbl: React.CSSProperties = { display:"block", fontSize:11, fontWeight:700, color:"#6b7280", marginBottom:4, marginTop:14, letterSpacing:"0.05em" };
@@ -278,9 +311,16 @@ function PhaseBoard({ countries }: { countries: ComputedCountry[] }) {
               <div key={c.code} style={{ padding:"10px 12px", borderTop:i>0?"1px solid #f1f5f9":"none", background:i%2===0?"#fff":"#f8fafc" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:6 }}>
                   <span style={{ fontWeight:700, fontSize:13 }}>{c.name}</span>
-                  <span style={{ fontSize:10, color:"#64748b", whiteSpace:"nowrap", flexShrink:0, paddingTop:2 }}>
-                    {c.liveDate.split(";")[0].replace(/\(.*?\)/g,"").trim()}
-                  </span>
+                  <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                    {(c.effort && c.effort !== "TBD") && (
+                      <span style={{ fontSize:10, padding:"1px 5px", borderRadius:8, fontWeight:700, background:EFFORT_STYLE[c.effort].bg, color:EFFORT_STYLE[c.effort].text }}>
+                        {c.effort}
+                      </span>
+                    )}
+                    <span style={{ fontSize:10, color:"#64748b", whiteSpace:"nowrap", paddingTop:2 }}>
+                      {c.liveDate.split(";")[0].replace(/\(.*?\)/g,"").trim()}
+                    </span>
+                  </div>
                 </div>
                 <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{c.scope}</div>
                 <div style={{ display:"flex", gap:4, marginTop:5, flexWrap:"wrap" }}>
@@ -379,14 +419,14 @@ function Timeline({ countries }: { countries: ComputedCountry[] }) {
 
 // ── Table ─────────────────────────────────────────────────────────────────────
 
-function Table({ countries, onUpdate }: { countries: ComputedCountry[]; onUpdate: (code: string, field: string, val: number) => void }) {
+function Table({ countries, onUpdate, onEffort }: { countries: ComputedCountry[]; onUpdate: (code: string, field: string, val: number) => void; onEffort: (code: string, val: EffortTier) => void }) {
   const sorted = [...countries].sort((a,b)=>b.priority-a.priority||parseFirstYear(a.liveDate)-parseFirstYear(b.liveDate));
   return (
     <div style={{ overflowX:"auto" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
         <thead>
           <tr style={{ background:"#f8fafc", borderBottom:"2px solid #e2e8f0" }}>
-            {["P","Country","Mandate Date","Scope","Non-Res","Resident","Local","Non-Local","Pipeline","Deals","Eezi","Invopop"].map(h=>(
+            {["P","Country","Mandate Date","Scope","Non-Res","Resident","Local","Non-Local","Pipeline","Deals","Eezi","Invopop","Eng Effort"].map(h=>(
               <th key={h} style={{ padding:"8px 10px", textAlign:"left", fontSize:11, fontWeight:700, color:"#64748b", whiteSpace:"nowrap" }}>{h}</th>
             ))}
           </tr>
@@ -413,6 +453,9 @@ function Table({ countries, onUpdate }: { countries: ComputedCountry[]; onUpdate
               </td>
               <td style={{ padding:"8px 10px", textAlign:"center" }}>
                 <span style={{ fontSize:11, padding:"2px 8px", borderRadius:10, fontWeight:600, background:c.invopop?"#dbeafe":"#f1f5f9", color:c.invopop?"#1d4ed8":"#94a3b8" }}>{c.invopop?"Yes":"No"}</span>
+              </td>
+              <td style={{ padding:"8px 10px", textAlign:"center" }}>
+                <EffortEdit value={c.effort ?? "TBD"} onChange={v=>onEffort(c.code, v)} />
               </td>
             </tr>
           ))}
@@ -446,6 +489,10 @@ export function Roadmap() {
 
   function updateField(code: string, field: string, val: number) {
     setRaw(prev=>prev.map(c=>c.code===code?{...c,[field]:val}:c));
+  }
+
+  function updateEffort(code: string, val: EffortTier) {
+    setRaw(prev=>prev.map(c=>c.code===code?{...c, effort:val}:c));
   }
 
   const companyMaxArr = deals.reduce<Record<string,number>>((acc,d)=>{ acc[d.company]=Math.max(acc[d.company]||0,d.arr||0); return acc; },{});
@@ -559,7 +606,7 @@ export function Roadmap() {
       <div style={{ padding:"14px 28px 28px" }}>
         {view==="phases"   && <PhaseBoard countries={countries} />}
         {view==="timeline" && <Timeline   countries={countries} />}
-        {view==="table"    && <Table      countries={countries} onUpdate={updateField} />}
+        {view==="table"    && <Table      countries={countries} onUpdate={updateField} onEffort={updateEffort} />}
       </div>
 
       {/* Legend */}
@@ -576,6 +623,15 @@ export function Roadmap() {
           </div>
           <div style={{ fontSize:11, color:"#7c3aed", borderTop:"1px solid #f1f5f9", paddingTop:8 }}>
             <strong>ARR elevation:</strong> pipeline ARR ≥ ${ARR_ELEVATION_THRESHOLD.toLocaleString()} bumps base score +1 tier (max P5). Shown as <strong>↑ ARR-elevated</strong> on country cards.
+          </div>
+          <div style={{ fontSize:11, color:"#475569", borderTop:"1px solid #f1f5f9", paddingTop:8, marginTop:8 }}>
+            <strong>Eng effort</strong> (set in Table view, click to cycle): &nbsp;
+            {(["S","M","L","XL"] as EffortTier[]).map(e=>(
+              <span key={e} style={{ marginRight:10 }}>
+                <span style={{ padding:"1px 7px", borderRadius:8, fontWeight:600, fontSize:11, background:EFFORT_STYLE[e].bg, color:EFFORT_STYLE[e].text }}>{e}</span>
+                {" "}{EFFORT_STYLE[e].label}
+              </span>
+            ))}
           </div>
         </div>
       </div>
