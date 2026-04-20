@@ -28,11 +28,16 @@ Then open [http://localhost:3001](http://localhost:3001).
 
 - **Phase Board** — countries grouped by priority (P7 → P1), updated live as you edit
 - **Timeline** — Gantt-style view of mandate go-live dates
-- **Table** — edit local seller, non-local seller, and pipeline counts inline
+- **Table** — edit local seller, non-local seller, and pipeline counts inline; set eng effort per country
 - **Add Pipeline Deal** — add a company + ARR + country; priority scores recalculate automatically
 - Pipeline ARR ≥ $100K elevates a country's base priority by +1 tier (max P5)
+- **Eng effort** — set in Table view by clicking the Eng Effort cell to cycle through tiers; affects priority score
 
 ## Priority scoring
+
+Priority is calculated in two steps: demand score (market urgency) → adjusted by engineering effort.
+
+### Step 1 — Demand score
 
 | Priority | Condition |
 |----------|-----------|
@@ -43,3 +48,19 @@ Then open [http://localhost:3001](http://localhost:3001).
 | P3 | Upcoming rules + any in-scope exposure |
 | P2 | Upcoming rules, no in-scope exposure yet |
 | P1 | No rules or far-future rules |
+
+Pipeline ARR ≥ $100K bumps the base score +1 tier (max P5).
+
+### Step 2 — Engineering effort adjustment
+
+Effort is set by eng in the Table view (click the **Eng Effort** cell to cycle). It can only depress a score — never elevate it. Floor is always P1.
+
+| Effort | Meaning | Score adjustment |
+|--------|---------|-----------------|
+| TBD | Not yet scoped | 0 |
+| S | Small — days to weeks | 0 |
+| M | Medium — 1–2 months | 0 |
+| L | Large — quarter-scale | −1 tier |
+| XL | Extra large — multi-quarter | −2 tiers |
+
+**Example:** France scores P5 on demand. If eng scopes it XL, net score → P3. The effort badge appears on Phase Board cards when set.
