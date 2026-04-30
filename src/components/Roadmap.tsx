@@ -26,6 +26,17 @@ interface Deal {
   company: string;
   arr: number;
   countryCode: string;
+  source?: "omni" | "intake" | "salesforce" | "manual";
+  matchedField?: string;
+  note?: string;
+}
+
+interface ApiDeal {
+  company: string;
+  arr: number;
+  source: "salesforce" | "intake";
+  matchedField: string;
+  note: string;
 }
 
 interface ComputedCountry extends Country {
@@ -44,17 +55,14 @@ interface ClosedLostDeal {
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 //
-// Non-local seller counts come from the rules table only — they represent
-// sellers actually in scope for that country's mandate, NOT all Anrok
-// customers who file VAT there. Countries with no non-resident rules show
-// "—" in the rules table and use 0 here, even if Anrok has non-local VAT
-// filers in those markets (e.g. UAE has 13 non-local VAT filers but
-// nonRes="No", so those sellers are not in scope for e-invoicing → 0).
+// Non-local seller counts = distinct live Anrok sellers registered in each
+// non-US, non-local jurisdiction (easyFile/partnerFiles/sellerFiles).
+// Sourced from Omni via MCP on 2026-04-30; refresh when OMNI_API_KEY is available.
 
 const INITIAL_COUNTRIES: Country[] = [
   // ── Live mandates ────────────────────────────────────────────────────────────
   { code:"KR",     name:"South Korea",      liveDate:"2011",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:21, pipeline:0, eezi:true,  invopop:false },
-  { code:"TR",     name:"Turkey",           liveDate:"2012",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:6,  pipeline:0, eezi:false, invopop:false },
+  { code:"TR",     name:"Turkey",           liveDate:"2012",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:8,  pipeline:0, eezi:false, invopop:false },
   { code:"ID",     name:"Indonesia",        liveDate:"2016",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:4,  pipeline:0, eezi:false, invopop:false },
   { code:"CH",     name:"Switzerland",      liveDate:"2016",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:31, pipeline:0, eezi:true,  invopop:false },
   { code:"IT",     name:"Italy",            liveDate:"Jan 2019",                                 scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
@@ -62,8 +70,8 @@ const INITIAL_COUNTRIES: Country[] = [
   { code:"LU",     name:"Luxembourg",       liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
   { code:"SE",     name:"Sweden",           liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
   { code:"LT",     name:"Lithuania",        liveDate:"2019",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
-  { code:"IN",     name:"India",            liveDate:"2020",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:29, pipeline:0, eezi:true,  invopop:false },
-  { code:"IS",     name:"Iceland",          liveDate:"2020",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0, eezi:true,  invopop:false },
+  { code:"IN",     name:"India",            liveDate:"2020",                                     scope:"B2B + B2G",       nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:30, pipeline:0, eezi:true,  invopop:false },
+  { code:"IS",     name:"Iceland",          liveDate:"2020",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:2,  pipeline:0, eezi:true,  invopop:false },
   { code:"AL",     name:"Albania",          liveDate:"2021",                                     scope:"B2B + B2G",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, eezi:false, invopop:false, customerRequests:["Notion","Anthropic"] },
   { code:"SA",     name:"Saudi Arabia",     liveDate:"2021",                                     scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:1,  pipeline:0, eezi:true,  invopop:true  },
   { code:"AU",     name:"Australia",        liveDate:"2022",                                     scope:"B2G only",        nonRes:"No",  res:"Yes",      localSellers:1,  nonLocalSellers:47, pipeline:0, eezi:false, invopop:true  },
@@ -71,7 +79,7 @@ const INITIAL_COUNTRIES: Country[] = [
   { code:"TW",     name:"Taiwan",           liveDate:"Jan 2020 (non-res); Jan 2021 (locals)",    scope:"B2B + B2C",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:3,  pipeline:0, eezi:true,  invopop:false },
   { code:"RS",     name:"Serbia",           liveDate:"Jan 2023",                                 scope:"B2B + B2G",       nonRes:"Yes", res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:1, eezi:false, invopop:false, customerRequests:["Anthropic"] },
   { code:"RO",     name:"Romania",          liveDate:"Jan 2024",                                 scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
-  { code:"IL",     name:"Israel",           liveDate:"May 2024",                                 scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
+  { code:"IL",     name:"Israel",           liveDate:"May 2024",                                 scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
   { code:"DE",     name:"Germany",          liveDate:"Jan 2025 (receive); Jan 2027–2028 (send)", scope:"B2B",             nonRes:"No",  res:"Yes",      localSellers:2,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
   { code:"MY",     name:"Malaysia",         liveDate:"Jul 2025 (phased by revenue)",             scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:5,  pipeline:0, eezi:true,  invopop:true  },
   { code:"JO",     name:"Jordan",           liveDate:"2025",                                     scope:"B2B + B2C + B2G", nonRes:"No",  res:"Yes",      localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
@@ -89,12 +97,12 @@ const INITIAL_COUNTRIES: Country[] = [
   { code:"FR",     name:"France",           liveDate:"Sep 2026 (large/mid); Sep 2027 (SME)",     scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:1,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
   { code:"NZ",     name:"New Zealand",      liveDate:"2026–2027",                                scope:"B2G only",        nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:15, pipeline:0, eezi:false, invopop:true  },
   { code:"KH",     name:"Cambodia",         liveDate:"2027",                                     scope:"—",               nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:false },
-  { code:"AE",     name:"UAE",              liveDate:"Jan 2027 (large); Jul 2026 pilot",         scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:true  },
+  { code:"AE",     name:"UAE",              liveDate:"Jan 2027 (large); Jul 2026 pilot",         scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:13, pipeline:0, eezi:false, invopop:true  },
   { code:"ES",     name:"Spain",            liveDate:"2027–2028",                                scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
   { code:"ZA",     name:"South Africa",     liveDate:"~2028",                                    scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:11, pipeline:0, eezi:false, invopop:false },
-  { code:"GB",     name:"United Kingdom",   liveDate:"~2029",                                    scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:13, nonLocalSellers:96, pipeline:0, eezi:true,  invopop:false },
+  { code:"GB",     name:"United Kingdom",   liveDate:"~2029",                                    scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:14, nonLocalSellers:96, pipeline:0, eezi:true,  invopop:false },
   { code:"IE",     name:"Ireland",          liveDate:"2028–2030 (ViDA)",                         scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:4,  nonLocalSellers:0,  pipeline:0, eezi:false, invopop:false },
-  { code:"NO",     name:"Norway",           liveDate:"2028–2030",                                scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:22, pipeline:0, eezi:true,  invopop:true  },
+  { code:"NO",     name:"Norway",           liveDate:"2028–2030",                                scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:23, pipeline:0, eezi:true,  invopop:true  },
   { code:"DK",     name:"Denmark",          liveDate:"~2030",                                    scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:true  },
   { code:"AT",     name:"Austria",          liveDate:"~2030",                                    scope:"B2B + B2G",       nonRes:"No",  res:"Upcoming", localSellers:0,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
   { code:"NL",     name:"Netherlands",      liveDate:"~2030 (ViDA)",                             scope:"B2B",             nonRes:"No",  res:"Upcoming", localSellers:2,  nonLocalSellers:0,  pipeline:0, eezi:true,  invopop:false },
@@ -442,10 +450,14 @@ function Table({ countries, onUpdate, onEffort }: { countries: ComputedCountry[]
               <td style={{ padding:"8px 10px" }}><ResTag value={c.res} /></td>
               <td style={{ padding:"8px 10px", textAlign:"center" }}><InlineEdit value={c.localSellers}    onChange={v=>onUpdate(c.code,"localSellers",v)} /></td>
               <td style={{ padding:"8px 10px", textAlign:"center" }}><InlineEdit value={c.nonLocalSellers} onChange={v=>onUpdate(c.code,"nonLocalSellers",v)} /></td>
-              <td style={{ padding:"8px 10px", textAlign:"center" }}><InlineEdit value={c.pipeline}        onChange={v=>onUpdate(c.code,"pipeline",v)} /></td>
+              <td style={{ padding:"8px 10px", textAlign:"center" }}>
+                {c.deals.length > 0
+                  ? <span style={{ fontWeight:700, color:"#1d4ed8" }}>{c.deals.length}</span>
+                  : <span style={{ color:"#d1d5db" }}>—</span>}
+              </td>
               <td style={{ padding:"8px 10px" }}>
-                {c.deals?.length
-                  ? c.deals.map((d,di)=><div key={di} style={{ fontSize:11, color:"#1d4ed8" }}>{d.company}{d.arr?` · ${fmtArr(d.arr)}`:""}</div>)
+                {c.deals.length > 0
+                  ? c.deals.map((d,di)=><div key={di} style={{ fontSize:11, color:"#1d4ed8" }}>{d.company}{d.arr ? ` · ${fmtArr(d.arr)}` : ""}</div>)
                   : <span style={{ color:"#d1d5db" }}>—</span>}
               </td>
               <td style={{ padding:"8px 10px", textAlign:"center" }}>
@@ -470,22 +482,53 @@ function Table({ countries, onUpdate, onEffort }: { countries: ComputedCountry[]
 export function Roadmap() {
   const [view,         setView]     = useState("phases");
   const [rawCountries, setRaw]      = useState<Country[]>(INITIAL_COUNTRIES);
-  const [deals,        setDeals]    = useState<Deal[]>([
-    { company:"Benchling",   arr:100000, countryCode:"FR" },
-    { company:"Rhapsody",    arr:155000, countryCode:"DK" },
-    { company:"Rhapsody",    arr:0,      countryCode:"FR" },
-    { company:"Rhapsody",    arr:0,      countryCode:"GB" },
-  ]);
+  const [apiDeals,     setApiDeals] = useState<ApiDeal[]>([]);
+  const [manualDeals,  setManualDeals] = useState<Deal[]>([]);
+  const [pipelineAssignments, setPipelineAssignments] = useState<Record<string, string[]>>({});
+  const [pipelineStatus, setPipelineStatus] = useState<"loading"|"live"|"error">("loading");
   const [showModal,    setShowModal]    = useState(false);
   const [showCL,       setShowCL]       = useState(false);
   const [showPipeline, setShowPipeline] = useState(false);
   const [sellerCounts, setSellerCounts] = useState<{ local: Record<string,number>; nonLocal: Record<string,number> } | null>(null);
 
+  // Assigned SF/intake deals — one Deal entry per company+country pair
+  const deals = useMemo<Deal[]>(() => [
+    ...apiDeals.flatMap(d => {
+      const codes = Array.isArray(pipelineAssignments[d.company]) ? pipelineAssignments[d.company] : [];
+      return codes.map(countryCode => ({ ...d, countryCode }));
+    }),
+    ...manualDeals,
+  ], [apiDeals, pipelineAssignments, manualDeals]);
+
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("pipelineAssignments");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migrate old format (string) to new format (string[])
+        const migrated: Record<string, string[]> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          migrated[k] = Array.isArray(v) ? v : (v ? [v as string] : []);
+        }
+        setPipelineAssignments(migrated);
+      }
+    } catch {}
+
     fetch("/api/sellers")
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data && !data.error) setSellerCounts(data); })
-      .catch(() => {}); // silently fall back to hardcoded values on failure
+      .catch(() => {});
+    fetch("/api/pipeline")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && !data.error && Array.isArray(data.deals)) {
+          setApiDeals(data.deals);
+          setPipelineStatus("live");
+        } else {
+          setPipelineStatus("error");
+        }
+      })
+      .catch(() => setPipelineStatus("error"));
   }, []);
 
   const countries = useMemo<ComputedCountry[]>(()=>rawCountries.map(c=>{
@@ -507,7 +550,8 @@ export function Roadmap() {
     setRaw(prev=>prev.map(c=>c.code===code?{...c, effort:val}:c));
   }
 
-  const companyMaxArr = deals.reduce<Record<string,number>>((acc,d)=>{ acc[d.company]=Math.max(acc[d.company]||0,d.arr||0); return acc; },{});
+  // Pipeline ARR = all SF/Omni/intake deals (assigned or not) + manual deals, deduped by company
+  const companyMaxArr = [...apiDeals, ...manualDeals].reduce<Record<string,number>>((acc,d)=>{ acc[d.company]=Math.max(acc[d.company]||0,d.arr||0); return acc; },{});
   const pipelineArr   = Object.values(companyMaxArr).reduce((s,v)=>s+v,0);
   const closedLostArr = CLOSED_LOST.reduce((s,d)=>s+(d.arr||0),0);
   const p7 = countries.filter(c=>c.priority===7);
@@ -526,6 +570,9 @@ export function Roadmap() {
               {sellerCounts
                 ? <span style={{ marginLeft:8, color:"#4ade80", fontSize:11, fontWeight:600 }}>● seller counts live from Omni</span>
                 : <span style={{ marginLeft:8, color:"#64748b", fontSize:11 }}>● seller counts static (Omni unavailable)</span>}
+              {pipelineStatus === "live"    && <span style={{ marginLeft:8, color:"#4ade80", fontSize:11, fontWeight:600 }}>● {apiDeals.length} pipeline deals from Salesforce</span>}
+              {pipelineStatus === "loading" && <span style={{ marginLeft:8, color:"#94a3b8", fontSize:11 }}>● pipeline loading…</span>}
+              {pipelineStatus === "error"   && <span style={{ marginLeft:8, color:"#f87171", fontSize:11 }}>● pipeline unavailable</span>}
             </p>
           </div>
           <button onClick={()=>setShowModal(true)} style={{ ...btnP, padding:"9px 18px" }}>+ Add Pipeline Deal</button>
@@ -534,7 +581,7 @@ export function Roadmap() {
           {[
             { label:"P7 — Act now",        val:p7.length?p7.map(c=>c.name).join(", "):"None", sub:"Live non-res mandate + non-local sellers",  accent:"#ef4444" },
             { label:"P6 — High urgency",   val:p6.length?p6.map(c=>c.name).join(", "):"None", sub:"Live non-res mandate + pipeline",           accent:"#f97316" },
-            { label:"Pipeline ARR at risk",val:fmtArr(pipelineArr),   sub:"Click to expand",                                                   accent:"#3b82f6", onClick:()=>setShowPipeline(v=>!v) },
+            { label:"Pipeline ARR at risk",val:fmtArr(pipelineArr),   sub:`${apiDeals.length} deals · click to assign countries`,             accent:"#3b82f6", onClick:()=>setShowPipeline(v=>!v) },
             { label:"Closed-lost to gap",  val:fmtArr(closedLostArr), sub:"Click to expand",                                                   accent:"#dc2626", onClick:()=>setShowCL(v=>!v) },
           ].map(s=>(
             <div key={s.label} onClick={s.onClick} style={{ background:"#1e293b", borderRadius:8, padding:"10px 14px", minWidth:190, cursor:s.onClick?"pointer":"default", border:"1px solid #334155" }}>
@@ -576,33 +623,63 @@ export function Roadmap() {
       {/* Pipeline panel */}
       {showPipeline && (
         <div style={{ background:"#eff6ff", borderBottom:"1px solid #bfdbfe", padding:"12px 28px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-            <span style={{ fontWeight:700, color:"#1d4ed8", fontSize:13 }}>Active Pipeline — E-Invoicing Requirement ({fmtArr(pipelineArr)} total)</span>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+            <span style={{ fontWeight:700, color:"#1d4ed8", fontSize:13 }}>
+              Active Pipeline — E-Invoicing Requirement ({fmtArr(pipelineArr)} across {apiDeals.length} deals)
+            </span>
             <button onClick={()=>setShowPipeline(false)} style={{ background:"none", border:"none", cursor:"pointer", color:"#1d4ed8", fontSize:20, lineHeight:1 }}>×</button>
           </div>
+          <p style={{ margin:"0 0 10px", fontSize:11, color:"#3b82f6" }}>
+            Assign a country to each deal — it will appear in the Pipeline column and Deals list in the Table view.
+          </p>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {Object.values(deals.reduce<Record<string,{company:string;arr:number;countryCodes:string[]}>>((acc,d)=>{
-              if (!acc[d.company]) acc[d.company] = { company:d.company, arr:0, countryCodes:[] };
-              acc[d.company].arr = Math.max(acc[d.company].arr, d.arr||0);
-              acc[d.company].countryCodes.push(d.countryCode);
-              return acc;
-            },{})).map(g=>{
-              const names = g.countryCodes.map(code=>countries.find(c=>c.code===code)?.name||code);
+            {apiDeals.map(d => {
+              const assigned = pipelineAssignments[d.company] ?? [];
+              const unassigned = countries.filter(c => !assigned.includes(c.code));
+              const saveAssigned = (next: string[]) => {
+                const a = { ...pipelineAssignments, [d.company]: next };
+                if (!next.length) delete a[d.company];
+                setPipelineAssignments(a);
+                localStorage.setItem("pipelineAssignments", JSON.stringify(a));
+              };
               return (
-                <div key={g.company} style={{ background:"#fff", border:"1px solid #bfdbfe", borderRadius:8, padding:"8px 12px", minWidth:200, maxWidth:240 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                    <span style={{ fontWeight:700, fontSize:13 }}>{g.company}</span>
-                    <span onClick={()=>setDeals(prev=>prev.filter(d=>d.company!==g.company))} style={{ cursor:"pointer", color:"#94a3b8", fontWeight:700, fontSize:16, lineHeight:1, marginLeft:6 }}>×</span>
-                  </div>
-                  {g.arr>0 && <div style={{ fontSize:13, color:"#1d4ed8", fontWeight:700 }}>{fmtArr(g.arr)}</div>}
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:5 }}>
-                    {names.map(n=>(
-                      <span key={n} style={{ fontSize:10, padding:"1px 6px", borderRadius:10, background:"#dbeafe", color:"#1d4ed8", fontWeight:600 }}>{n}</span>
+                <div key={d.company} style={{ background:"#fff", border:`1px solid ${assigned.length?"#93c5fd":"#e2e8f0"}`, borderRadius:8, padding:"8px 12px", minWidth:210, maxWidth:260 }}>
+                  <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{d.company}</div>
+                  {d.arr > 0 && <div style={{ fontSize:12, color:"#1d4ed8", fontWeight:700, marginBottom:6 }}>{fmtArr(d.arr)}</div>}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:6 }}>
+                    {assigned.map(code => (
+                      <span key={code} style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:11, padding:"2px 6px", borderRadius:10, background:"#dbeafe", color:"#1d4ed8", fontWeight:600 }}>
+                        {countries.find(c => c.code === code)?.name ?? code}
+                        <span onClick={() => saveAssigned(assigned.filter(c => c !== code))} style={{ cursor:"pointer", fontWeight:700, fontSize:13, lineHeight:1 }}>×</span>
+                      </span>
                     ))}
                   </div>
+                  <select
+                    value=""
+                    onChange={e => { if (e.target.value) saveAssigned([...assigned, e.target.value]); }}
+                    style={{ width:"100%", padding:"4px 6px", border:"1px solid #d1d5db", borderRadius:4, fontSize:12, background:"#f8fafc", color:"#64748b" }}
+                  >
+                    <option value="">+ add country…</option>
+                    {unassigned.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
+                  {d.matchedField && <div style={{ fontSize:10, color:"#94a3b8", marginTop:4 }}>via {d.matchedField}</div>}
                 </div>
               );
             })}
+            {manualDeals.map((d,i) => (
+              <div key={`manual-${i}`} style={{ background:"#fff", border:"1px solid #93c5fd", borderRadius:8, padding:"8px 12px", minWidth:210, maxWidth:250 }}>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <span style={{ fontWeight:700, fontSize:13 }}>{d.company}</span>
+                  <span onClick={()=>setManualDeals(prev=>prev.filter((_,j)=>j!==i))} style={{ cursor:"pointer", color:"#94a3b8", fontSize:16, lineHeight:1 }}>×</span>
+                </div>
+                {d.arr>0 && <div style={{ fontSize:12, color:"#1d4ed8", fontWeight:700, marginTop:2 }}>{fmtArr(d.arr)}</div>}
+                <div style={{ fontSize:10, color:"#3b82f6", marginTop:4 }}>{countries.find(c=>c.code===d.countryCode)?.name ?? d.countryCode}</div>
+                <div style={{ fontSize:10, color:"#94a3b8", marginTop:2 }}>manually added</div>
+              </div>
+            ))}
+            {apiDeals.length === 0 && manualDeals.length === 0 && (
+              <span style={{ fontSize:12, color:"#94a3b8", padding:"8px 0" }}>No pipeline deals loaded yet.</span>
+            )}
           </div>
         </div>
       )}
@@ -651,7 +728,7 @@ export function Roadmap() {
         </div>
       </div>
 
-      {showModal && <AddDealModal countries={countries} onAdd={d=>setDeals(prev=>[...prev,d])} onClose={()=>setShowModal(false)} />}
+      {showModal && <AddDealModal countries={countries} onAdd={d=>setManualDeals(prev=>[...prev,d])} onClose={()=>setShowModal(false)} />}
     </div>
   );
 }
